@@ -28,13 +28,13 @@ public class MyGameThread extends Thread
 	//------------------------------------------------------------------------------------------------
 	//	更新処理.
 	//------------------------------------------------------------------------------------------------
-	private void update()
+	public void update()
 	{
-	    for(int ii=0;ii<5;ii++)
+	    for(int ii=0;ii<20;ii++)
 	    {
-	        bgSprite[ii].position.z += 0.05f;
-	        if(bgSprite[ii].position.z >= (bgSprite[ii].height))
-	            bgSprite[ii].position.z = -(bgSprite[ii].height*4);
+	        bgSprite[ii].position.z += 0.5f;
+	        if(bgSprite[ii].position.z >= 0)
+	            bgSprite[ii].position.z = -(5*19);
 	    }
 	}
 	
@@ -45,12 +45,12 @@ public class MyGameThread extends Thread
 	
 	public void init()
 	{
-		bgSprite = new GLSprite[5];
-		for(int ii=0;ii<5;ii++)
+		bgSprite = new GLSprite[20];
+		for(int ii=0;ii<20;ii++)
 		{
 	        //海.
-	        bgSprite[ii] = new GLSprite(0.0f, -2.0f, -15.0f*ii, 30.0f, 15.0f, 1.0f);
-	        bgSprite[ii].rotationX = 91.0f;
+	        bgSprite[ii] = new GLSprite(0.0f, -2.0f, -5.0f*ii, 15.0f, 7.0f, 1.0f);
+	        //bgSprite[ii].rotationX = 91.0f;
 	        bgSprite[ii].vbo = Global.primitives[SpriteType.PLANE];
 		}
 		
@@ -68,6 +68,7 @@ public class MyGameThread extends Thread
 	
 	@Override
 	public void run() {
+        /*
 		long lastUpdateTime = System.currentTimeMillis();
 		while (true) {
 			// 休憩
@@ -84,12 +85,39 @@ public class MyGameThread extends Thread
 			// 1秒間に60回更新する
 			long nowTime = System.currentTimeMillis();
 			long difference = nowTime - lastUpdateTime;
-			while (difference >= 17) {
-				difference -= 17;
+			while (difference >= 16) {
+				difference -= 16;
 				update();
 			}
 			lastUpdateTime = nowTime - difference;
 		}
-	}
+		*/
+        long error = 0;
+        int fps = 60;
+        long idealSleep = (1000 << 16) / fps;
+        long oldTime;
+        long newTime = System.currentTimeMillis() << 16;
+        while (true) {
+            if (!mIsActive) {
+                // アクティブでなければゲームを進めない
+                newTime = System.currentTimeMillis() << 16;// 復帰時に更新処理が複数回行われないようにする
+                continue;
+            }
+            oldTime = newTime;
+            update(); // メイン処理
+            newTime = System.currentTimeMillis() << 16;
+            long sleepTime = idealSleep - (newTime - oldTime) - error; // 休止できる時間
+            if (sleepTime < 0x20000) sleepTime = 0x20000; // 最低でも2msは休止
+            oldTime = newTime;
+            try {
+                Thread.sleep(sleepTime >> 16); // 休止
+            }catch(InterruptedException e) {
+
+            }
+            newTime = System.currentTimeMillis() << 16;
+            error = newTime - oldTime - sleepTime; // 休止時間の誤差
+        }
+
+    }
 
 }

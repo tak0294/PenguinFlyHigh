@@ -24,11 +24,6 @@ public class MyVbo
 	
 	public void draw(GL11 gl, int texture)
 	{
-		//頂点データを設定.
-		gl.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-		gl.glEnableClientState(GL11.GL_NORMAL_ARRAY);
-		
-		
 		//頂点バッファ.
 		gl.glBindBuffer(GL11.GL_ARRAY_BUFFER, this.vbo);
 		gl.glVertexPointer(3, GL11.GL_FLOAT, 0, 0);
@@ -45,8 +40,6 @@ public class MyVbo
 		if(texture != -1)
 		{
 	        //テクスチャとUVの指定
-			gl.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);//UVバッファ
-			gl.glEnable(GL11.GL_TEXTURE_2D);                    //テクスチャ
 	        gl.glBindTexture(GL11.GL_TEXTURE_2D,texture);
 	        gl.glBindBuffer(GL11.GL_ARRAY_BUFFER,this.tbo);
 	        gl.glTexCoordPointer(2,GL11.GL_FLOAT,0,0);

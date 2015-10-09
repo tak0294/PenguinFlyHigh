@@ -13,7 +13,7 @@ import android.content.res.Resources;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.GLU;
 
-public class MyRenderer implements Renderer
+public class MyRenderer implements android.opengl.GLSurfaceView.Renderer
 {
 	private MyGameThread mGame;
 	private Activity activity;
@@ -24,7 +24,9 @@ public class MyRenderer implements Renderer
 	private int particleTexture;
 	private int rockTexture;
 	private int numberTexture;
-	
+
+	private int groundTexture;
+
 	private int mWidth;
 	private int mHeight;
 	private int mWidthOffset;
@@ -33,8 +35,19 @@ public class MyRenderer implements Renderer
 	private boolean isPush = false;
 	
 	private ParticleSystem particleSystem;
-	
-	public MyRenderer(Activity activity, MyGameThread gameThread)
+
+    private float lightPos[]     = { 1.0f, 1.0f, 1.0f, 0.0f };
+    private float lightColor[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
+    private float lightAmbient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    private float diffuse[]      = { 1.7f, 1.7f, 1.7f, 1.0f };
+    private float ambient[]      = { 2.6f, 2.6f, 2.6f, 1.0f };
+
+    private float znear = 0.5f; //scene.zoom2;
+    private float zfar = 60.0f; //position[2];
+
+    private float fogColor[]= {1.0f, 1.0f, 1.0f, 1.0f}; //フォグの色
+
+    public MyRenderer(Activity activity, MyGameThread gameThread)
 	{
 		this.mGame = gameThread;
 		this.activity = activity;
@@ -49,35 +62,31 @@ public class MyRenderer implements Renderer
 	{
 		gl.glMatrixMode(GL11.GL_PROJECTION);
 		gl.glLoadIdentity();
-		float znear = 0.5f; //scene.zoom2;
-		float zfar = 30.0f; //position[2];
 	    gl.glFrustumf(-0.3f, 0.3f, -0.2f, 0.2f, znear, zfar);
 		
 	    // ライトとマテリアルの設定
-	    float lightPos[]     = { 1.0f, 1.0f, 1.0f, 0.0f };
-	    float lightColor[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
-	    float lightAmbient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	    float diffuse[]      = { 1.7f, 1.7f, 1.7f, 1.0f };
-	    float ambient[]      = { 2.6f, 2.6f, 2.6f, 1.0f };
-	    
+
 	    
 	    // カメラの設定(デフォルト)
 		gl.glMatrixMode(GL11.GL_MODELVIEW);
 		gl.glLoadIdentity();
 	    
-	    gl.glEnable(GL11.GL_LIGHTING);
-	    gl.glEnable(GL11.GL_LIGHT0);
-	    gl.glLightfv(GL11.GL_LIGHT0, GL11.GL_POSITION, lightPos, 0);
-	    gl.glLightfv(GL11.GL_LIGHT0, GL11.GL_DIFFUSE, lightColor, 0);
-	    gl.glLightfv(GL11.GL_LIGHT0, GL11.GL_AMBIENT, lightAmbient, 0);
-	    gl.glMaterialfv(GL11.GL_FRONT_AND_BACK, GL11.GL_DIFFUSE, diffuse, 0);
-	    gl.glMaterialfv(GL11.GL_FRONT_AND_BACK, GL11.GL_AMBIENT, ambient, 0);
-		
+//	    gl.glEnable(GL11.GL_LIGHTING);
+//	    gl.glEnable(GL11.GL_LIGHT0);
+//	    gl.glLightfv(GL11.GL_LIGHT0, GL11.GL_POSITION, lightPos, 0);
+//	    gl.glLightfv(GL11.GL_LIGHT0, GL11.GL_DIFFUSE, lightColor, 0);
+//	    gl.glLightfv(GL11.GL_LIGHT0, GL11.GL_AMBIENT, lightAmbient, 0);
+//	    gl.glMaterialfv(GL11.GL_FRONT_AND_BACK, GL11.GL_DIFFUSE, diffuse, 0);
+//	    gl.glMaterialfv(GL11.GL_FRONT_AND_BACK, GL11.GL_AMBIENT, ambient, 0);
+
 	    //深度テストを有効.
 		gl.glEnable(GL11.GL_DEPTH_TEST);
 
+        // アルファテスト
+        gl.glEnable(GL11.GL_ALPHA_TEST);
+        gl.glAlphaFunc(GL11.GL_GEQUAL, 0.1f);
+
 	    //フォグ設定.
-	    float fogColor[]= {1.0f, 1.0f, 1.0f, 1.0f}; //フォグの色
 	    gl.glEnable(GL11.GL_FOG);
 	    gl.glFogx(GL11.GL_FOG_MODE, GL11.GL_LINEAR);
 	    gl.glFogfv(GL11.GL_FOG_COLOR, fogColor, 0);
@@ -85,26 +94,46 @@ public class MyRenderer implements Renderer
 	    gl.glHint(GL11.GL_FOG_HINT, GL11.GL_DONT_CARE);
 	    gl.glFogf(GL11.GL_FOG_START, 10.5f);
 	    gl.glFogf(GL11.GL_FOG_END, 20.0f);
-	    
-	    for(int ii=0;ii<5;ii++)
+
+        //頂点データを設定.
+        gl.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+        gl.glEnableClientState(GL11.GL_NORMAL_ARRAY);
+
+        gl.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);//UVバッファ
+        gl.glEnable(GL11.GL_TEXTURE_2D);                    //テクスチャ
+
+        for(int ii=0;ii<20;ii++)
 	    {
-	    	mGame.bgSprite[ii].draw(gl, rockTexture);
+	    	mGame.bgSprite[ii].draw(gl, groundTexture);
 	    }
+
+        gl.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);//UVバッファ
+        gl.glDisable(GL11.GL_TEXTURE_2D);                    //テクスチャ
+
+        //頂点データを設定.
+        gl.glDisableClientState(GL11.GL_VERTEX_ARRAY);
+        gl.glDisableClientState(GL11.GL_NORMAL_ARRAY);
 
 	    //Fog終了.
 	    gl.glDisable(GL11.GL_FOG);
 
+        // アルファテスト終了.
+        gl.glDisable(GL11.GL_ALPHA_TEST);
+
 		//深度テスト終了
 		gl.glDisable(GL11.GL_DEPTH_TEST);
-	    gl.glDisable(GL11.GL_LIGHTING);
-	    gl.glDisable(GL11.GL_LIGHT0);
+
+        //gl.glDisable(GL11.GL_LIGHTING);
+	    //gl.glDisable(GL11.GL_LIGHT0);
 
 	    //パーティクルを描画.
+        /*
 	    particleSystem.update();
 		gl.glEnable(GL10.GL_BLEND);
 		gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE);
 		particleSystem.draw(gl, particleTexture);
-		gl.glDisable(GL10.GL_BLEND); 
+		gl.glDisable(GL10.GL_BLEND);
+		 */
  	}
 	
 	public void draw2D(GL11 gl)
@@ -116,7 +145,7 @@ public class MyRenderer implements Renderer
 		gl.glMatrixMode(GL10.GL_MODELVIEW);
 		gl.glLoadIdentity();
 		
-		GraphicUtil.drawNumbers(gl, 0.0f, 0.0f, 0.1f, 0.1f, numberTexture, 100, 8, 1.0f, 1.0f, 1.0f, 1.0f);
+		//GraphicUtil.drawNumbers(gl, 0.0f, 0.0f, 0.1f, 0.1f, numberTexture, 100, 8, 1.0f, 1.0f, 1.0f, 1.0f);
 		//GraphicUtil.drawRectangle(gl, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 	
@@ -124,7 +153,8 @@ public class MyRenderer implements Renderer
 	public void onDrawFrame(GL10 gl10)
 	{
 		GL11 gl = (GL11)gl10;
-		
+		mGame.update();
+
 		gl.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
 		gl.glViewport(mWidthOffset, mHeightOffset, mWidth, mHeight);
@@ -170,7 +200,9 @@ public class MyRenderer implements Renderer
 		rockTexture 	= GraphicUtil.loadTexture(gl, "rock");
 		particleTexture = GraphicUtil.loadTexture(gl, "particle");
 		numberTexture	= GraphicUtil.loadTexture(gl, "number_texture");
-		
+
+        groundTexture = GraphicUtil.loadTexture(gl, "jimen");
+
 		//----------------------------------------------
 		//	パーティクルシステムの作成.
 		//----------------------------------------------

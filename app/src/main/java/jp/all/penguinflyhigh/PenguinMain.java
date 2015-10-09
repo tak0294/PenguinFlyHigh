@@ -37,7 +37,7 @@ public class PenguinMain extends AppCompatActivity {
         glSurfaceView.setRenderer(renderer);
         setContentView(glSurfaceView);
 
-        mGameThread.start();
+        //mGameThread.start();
     }
 
 }
